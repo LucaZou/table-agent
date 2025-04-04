@@ -1,0 +1,51 @@
+# 版本控制
+.git
+.gitignore
+
+# 环境文件
+.env
+.env.*
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# 日志文件
+*.log
+logs/
+
+# 数据文件和缓存
+uploads/*
+static/images/*
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE文件
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Docker相关
+Dockerfile
+docker-compose.yml
+docker-compose.*.yml 
