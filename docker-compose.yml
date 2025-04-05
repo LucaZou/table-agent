@@ -1,10 +1,9 @@
-version: '3'
-
 services:
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+    container_name: u_agent_frontend
     ports:
       - "80:80"
     depends_on:
@@ -12,22 +11,25 @@ services:
     networks:
       - app-network
     restart: unless-stopped
-
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    container_name: u_agent_backend
     ports:
       - "8000:8000"
     volumes:
-      - ./backend/uploads:/app/uploads
-      - ./backend/static:/app/static
+      - backend-uploads:/app/uploads
+      - backend-static:/app/static/images
     environment:
       - TZ=Asia/Shanghai
+      - PYTHONUNBUFFERED=1
     networks:
       - app-network
     restart: unless-stopped
-
+volumes:
+  backend-uploads:
+  backend-static:
 networks:
   app-network:
-    driver: bridge 
+    driver: bridge

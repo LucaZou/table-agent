@@ -9,8 +9,9 @@ ENV PYTHONUNBUFFERED=1
 # 设置时区
 ENV TZ=Asia/Shanghai
 
-# 安装依赖
-RUN apt-get update \
+# 配置清华大学镜像源并安装依赖
+RUN sed -i 's/deb.debian.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list.d/debian.sources \
+    && apt-get update \
     && apt-get install -y --no-install-recommends \
         gcc \
         build-essential \
@@ -23,10 +24,10 @@ RUN apt-get update \
 COPY requirements.txt .
 
 # 先安装numpy/pandas等大型包，加快后续安装
-RUN pip install --no-cache-dir numpy pandas matplotlib
-
-# 安装项目依赖
-RUN pip install --no-cache-dir -r requirements.txt \
+# 使用阿里云的pip镜像源安装依赖
+RUN pip config set global.index-url https://mirrors.aliyun.com/pypi/simple/ \
+    && pip install --no-cache-dir numpy pandas matplotlib \
+    && pip install --no-cache-dir -r requirements.txt \
     && rm -rf ~/.cache/pip
 
 # 复制项目文件
@@ -39,4 +40,4 @@ RUN mkdir -p uploads static/images
 EXPOSE 8000
 
 # 启动命令
-CMD ["gunicorn", "app.main:app", "--workers", "4", "--worker-class", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000"] 
+CMD ["gunicorn", "app.main:app", "--workers", "4", "--worker-class", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000"]
