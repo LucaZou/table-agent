@@ -9,6 +9,7 @@ from pathlib import Path
 
 from app.models.file_models import FileResponse, FilePreviewResponse
 from app.services.file_service import save_upload_file, read_file_preview, export_file
+from app.services.file_cleanup_service import update_file_access
 
 # 获取根目录位置
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -47,6 +48,9 @@ async def upload_file(
         file_id = str(uuid.uuid4())
         saved_file_path = await save_upload_file(file, file_id, file_extension)
         
+        # 更新文件访问记录
+        update_file_access(file_id)
+        
         return {
             "file_id": file_id,
             "original_filename": file.filename,
@@ -57,30 +61,32 @@ async def upload_file(
         raise HTTPException(status_code=500, detail=f"文件上传失败: {str(e)}")
 
 @router.get(
-    "/preview/{file_id}", 
+    "/preview/{file_id}",
     response_model=FilePreviewResponse,
     summary="获取文件预览",
     description="""
-    获取已上传文件的预览内容，默认显示前5行数据。
+    获取已上传文件的预览数据。
     
-    用于在界面上展示表格数据的预览，包括列名和样本数据。
+    - 返回指定行数的数据预览
+    - 包含列信息和总行数
     """,
-    response_description="返回表格列名和预览数据"
+    response_description="返回文件预览数据"
 )
-async def preview_file(
-    file_id: str = FastAPIPath(..., description="文件唯一ID"), 
+async def get_preview(
+    file_id: str = FastAPIPath(..., description="文件唯一ID"),
     rows: int = 5
 ):
-    """获取上传文件的预览内容"""
+    """获取文件预览"""
     try:
-        # 从文件ID查找文件
+        # 更新文件访问记录
+        update_file_access(file_id)
         preview_data = await read_file_preview(file_id, rows)
         return preview_data
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="文件不存在")
     except Exception as e:
-        logger.exception("文件预览失败")
-        raise HTTPException(status_code=500, detail=f"文件预览失败: {str(e)}")
+        logger.exception("获取文件预览失败")
+        raise HTTPException(status_code=500, detail=f"获取文件预览失败: {str(e)}")
 
 @router.get(
     "/export/{file_id}",
@@ -99,6 +105,8 @@ async def export_data(
 ):
     """导出已处理的文件"""
     try:
+        # 更新文件访问记录
+        update_file_access(file_id)
         file_path = await export_file(file_id, filename)
         # 使用FastAPI的FileResponse返回文件下载
         return FastAPIFileResponse(

@@ -7,8 +7,9 @@ import os
 import logging
 from dotenv import load_dotenv
 
-# 导入路由
+# 导入路由和服务
 from app.routers import file_router, chat_router
+from app.services.file_cleanup_service import start_cleanup_scheduler
 
 # 加载环境变量
 load_dotenv()
@@ -180,6 +181,14 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 # 包含路由
 app.include_router(file_router.router)
 app.include_router(chat_router.router)
+
+@app.on_event("startup")
+async def startup_event():
+    """应用启动时的初始化操作"""
+    # 启动文件清理调度器
+    import asyncio
+    asyncio.create_task(start_cleanup_scheduler())
+    logger.info("文件清理调度器已启动")
 
 @app.get("/", tags=["健康检查"], 
          summary="API健康检查", 

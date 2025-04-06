@@ -31,6 +31,7 @@ wheels/
 # 数据文件
 uploads/
 static/images/
+file_access_records.txt
 
 # 日志
 *.log

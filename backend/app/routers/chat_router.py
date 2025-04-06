@@ -114,6 +114,9 @@ result['新列'] = result['现有列'] * 2
             
             # 如果有结果DataFrame,转换为字符串表示预览
             if result_df is not None:
+                # 处理特殊浮点值
+                result_df = result_df.replace([float('inf'), float('-inf')], [None, None])
+                
                 result = {
                     "success": True,
                     "preview": result_df.head(5).to_dict(orient="records"),

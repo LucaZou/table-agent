@@ -46,6 +46,11 @@ async def read_file_preview(file_id: str, rows: int = 5) -> Dict[str, Any]:
         df = pd.read_csv(file_path)
     else:  # .xlsx 或 .xls
         df = pd.read_excel(file_path)
+
+    # 处理特殊浮点值
+    # 将NaN、Infinity等特殊值转换为None或字符串，以便JSON序列化
+    df = df.replace([float('inf'), float('-inf')], [None, None])
+    # NaN值会在to_dict时自动转换为None
     
     # 构建预览数据
     preview_data = {
