@@ -12,21 +12,26 @@ $Yellow = "$ESC[33m"
 $NC = "$ESC[0m"
 
 Write-Host "${Green}开始部署Docker环境...${NC}"
-Write-Host "${Cyan}正在构建前端...${NC}"
-Set-Location -Path "frontend"
-npm install
-npm run build
-Set-Location -Path ".."
 
 Write-Host "${Cyan}确保后端目录存在...${NC}"
 New-Item -ItemType Directory -Path "backend/uploads" -Force
 New-Item -ItemType Directory -Path "backend/static/images" -Force
 
+# 停止和删除旧容器
 Write-Host "${Cyan}停止和删除旧容器...${NC}"
 docker-compose -f docker-compose.yml down
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "${Red}停止容器失败${NC}"
+    exit 1
+}
 
+# 启动新容器并强制构建
 Write-Host "${Cyan}启动新容器...${NC}"
-docker-compose -f docker-compose.yml up -d
+docker-compose -f docker-compose.yml up -d --build
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "${Red}容器启动失败${NC}"
+    exit 1
+}
 
 Write-Host "${Green}容器状态:${NC}"
 docker-compose -f docker-compose.yml ps

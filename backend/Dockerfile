@@ -9,8 +9,8 @@ ENV PYTHONUNBUFFERED=1
 # 设置时区
 ENV TZ=Asia/Shanghai
 
-# 配置清华大学镜像源并安装依赖
-RUN sed -i 's/deb.debian.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list.d/debian.sources \
+# 配置镜像源并安装依赖
+RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list.d/debian.sources \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
         gcc \
@@ -33,8 +33,10 @@ RUN pip config set global.index-url https://mirrors.aliyun.com/pypi/simple/ \
 # 复制项目文件
 COPY . .
 
-# 创建必要的目录
-RUN mkdir -p uploads static/images
+# 创建必要的目录并设置权限
+RUN mkdir -p uploads static/images \
+    && chmod -R 755 uploads \
+    && chmod -R 755 static/images
 
 # 端口暴露
 EXPOSE 8000
