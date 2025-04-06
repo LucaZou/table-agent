@@ -1,12 +1,15 @@
+import json
+from typing import Any
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 import os
 import logging
 from dotenv import load_dotenv
-
+import pandas as pd
+import numpy as np
 # 导入路由和服务
 from app.routers import file_router, chat_router
 from app.services.file_cleanup_service import start_cleanup_scheduler
@@ -139,13 +142,29 @@ def ensure_swagger_files_exist():
 # 确保Swagger UI文件存在
 ensure_swagger_files_exist()
 
+class CustomJSONResponse(JSONResponse):
+    def render(self, content: Any) -> bytes:
+        def json_safe_default(obj):
+            if pd.isna(obj) or (isinstance(obj, float) and (np.isnan(obj) or np.isinf(obj))):
+                return None
+            if isinstance(obj, (pd.Series, pd.DataFrame)):
+                return obj.to_dict()
+            return str(obj)
+            
+        return json.dumps(
+            content,
+            ensure_ascii=False,
+            default=json_safe_default
+        ).encode("utf-8")
+
 # 创建FastAPI应用
 app = FastAPI(
     title="AI表格处理工具",
+    default_response_class= CustomJSONResponse,  # 设置默认响应类
     description="""
     # AI表格处理工具API
     
-    这是一个基于FastAPI构建的表格处理工具，结合了AI能力来处理和分析表格数据。
+    这是一个基于FastAPI构建的表格处理工具,结合了AI能力来处理和分析表格数据。
     
     ## 主要功能
     

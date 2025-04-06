@@ -38,4 +38,4 @@ docker-compose -f docker-compose.yml ps
 
 Write-Host "${Green}部署完成!${NC}"
 Write-Host "${Yellow}前端访问地址: http://localhost${NC}"
-Write-Host "${Yellow}后端API地址: http://localhost:8000${NC}"
+Write-Host "${Yellow}后端API地址: http://localhost:8000${NC}"   

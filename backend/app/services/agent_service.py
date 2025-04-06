@@ -125,6 +125,8 @@ async def process_dataframe_with_code(df: pd.DataFrame, code: str, file_id: str)
         
         # 如果有结果DataFrame，保存处理后的文件
         if result_df is not None:
+            # 处理特殊浮点值，避免JSON序列化问题
+            result_df = result_df.replace([float('inf'), float('-inf')], [None, None])
             # 确定文件类型并保存
             original_file_path = await get_file_path_by_id(file_id)
             if original_file_path:

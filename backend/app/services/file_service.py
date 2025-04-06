@@ -47,10 +47,10 @@ async def read_file_preview(file_id: str, rows: int = 5) -> Dict[str, Any]:
     else:  # .xlsx 或 .xls
         df = pd.read_excel(file_path)
 
-    # 处理特殊浮点值
-    # 将NaN、Infinity等特殊值转换为None或字符串，以便JSON序列化
-    df = df.replace([float('inf'), float('-inf')], [None, None])
-    # NaN值会在to_dict时自动转换为None
+    # 统一处理特殊值并记录
+    if df.isin([float('inf'), float('-inf'), pd.NA]).any().any():
+        logger.warning(f"文件 {file_id} 包含特殊值，已替换为 None")
+    df = df.replace([float('inf'), float('-inf'), pd.NA], None)
     
     # 构建预览数据
     preview_data = {

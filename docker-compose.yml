@@ -3,6 +3,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      tags:
+        - "0.0.1"
     container_name: u_agent_frontend
     ports:
       - "80:80"
@@ -15,10 +17,13 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      tags:
+        - "0.0.1"
     container_name: u_agent_backend
     ports:
       - "8000:8000"
     volumes:
+      - ./backend/app:/app/app
       - backend-uploads:/app/uploads
       - backend-static:/app/static/images
     environment:

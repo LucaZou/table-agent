@@ -1,10 +1,11 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks, Form, Request, Path as FastAPIPath
 from fastapi.responses import JSONResponse, FileResponse as FastAPIFileResponse
 import os
+import json
 import uuid
 import pandas as pd
 import logging
-from typing import List, Optional
+from typing import List, Optional, Any
 from pathlib import Path
 
 from app.models.file_models import FileResponse, FilePreviewResponse
@@ -21,6 +22,7 @@ logger = logging.getLogger("file_router")
 # 确保上传目录存在
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
+
 @router.post(
     "/upload", 
     response_model=FileResponse,
@@ -29,7 +31,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
     上传CSV或Excel格式的表格文件并返回文件ID。
     
     - 支持的文件格式: .csv, .xlsx, .xls
-    - 返回唯一的文件ID，用于后续操作
+    - 返回唯一的文件ID,用于后续操作
     """,
     response_description="返回文件ID和路径信息"
 )
@@ -51,11 +53,16 @@ async def upload_file(
         # 更新文件访问记录
         update_file_access(file_id)
         
-        return {
-            "file_id": file_id,
+        response_data = {
+            "file_id": file_id,  # 强制转为字符串
             "original_filename": file.filename,
             "file_path": saved_file_path
         }
+        logger.debug(f"返回的数据: {response_data}")  # 调试日志
+        return response_data
+    except ValueError as ve:
+        logger.error(f"值错误: {str(ve)}")
+        raise HTTPException(status_code=400, detail=f"无效输入: {str(ve)}")
     except Exception as e:
         logger.exception("文件上传失败")
         raise HTTPException(status_code=500, detail=f"文件上传失败: {str(e)}")
