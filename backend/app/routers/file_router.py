@@ -1,5 +1,5 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks, Form, Request, Path as FastAPIPath
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse as FastAPIFileResponse
 import os
 import uuid
 import pandas as pd
@@ -100,7 +100,8 @@ async def export_data(
     """导出已处理的文件"""
     try:
         file_path = await export_file(file_id, filename)
-        return FileResponse(
+        # 使用FastAPI的FileResponse返回文件下载
+        return FastAPIFileResponse(
             path=file_path,
             filename=os.path.basename(file_path),
             media_type="application/octet-stream"
@@ -129,4 +130,4 @@ async def delete_file(file_id: str = FastAPIPath(..., description="要删除的�
         return {"message": "文件已删除"}
     except Exception as e:
         logger.exception("文件删除失败")
-        raise HTTPException(status_code=500, detail=f"文件删除失败: {str(e)}") 
+        raise HTTPException(status_code=500, detail=f"文件删除失败: {str(e)}")
