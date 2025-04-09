@@ -81,7 +81,7 @@ async def upload_file(
 )
 async def get_preview(
     file_id: str = FastAPIPath(..., description="文件唯一ID"),
-    rows: int = 5
+    rows: int = 20
 ):
     """获取文件预览"""
     try:

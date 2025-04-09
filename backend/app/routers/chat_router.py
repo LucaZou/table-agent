@@ -119,7 +119,7 @@ result['新列'] = result['现有列'] * 2
                 
                 result = {
                     "success": True,
-                    "preview": result_df.head(5).to_dict(orient="records"),
+                    "preview": result_df.head(20).to_dict(orient="records"),
                     "columns": result_df.columns.tolist(),
                     "rows_count": len(result_df)
                 }

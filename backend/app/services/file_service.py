@@ -27,7 +27,7 @@ async def save_upload_file(file: UploadFile, file_id: str, file_extension: str) 
     logger.info(f"文件已保存: {saved_file_path}")
     return saved_file_path
 
-async def read_file_preview(file_id: str, rows: int = 5) -> Dict[str, Any]:
+async def read_file_preview(file_id: str, rows: int = 20) -> Dict[str, Any]:
     """读取文件预览内容"""
     # 查找匹配的文件
     file_path = None
