@@ -14,7 +14,7 @@ echo -e "${CYAN}停止和删除旧容器...${NC}"
 docker-compose -f docker-compose.yml down
 
 echo -e "${CYAN}启动新容器...${NC}"
-docker-compose -f docker-compose.yml up -d || { echo -e "${RED}容器启动失败${NC}"; exit 1; }
+docker-compose -f docker-compose.yml up -d --build || { echo -e "${RED}容器启动失败${NC}"; exit 1; }
 
 echo -e "${GREEN}容器状态:${NC}"
 docker-compose -f docker-compose.yml ps

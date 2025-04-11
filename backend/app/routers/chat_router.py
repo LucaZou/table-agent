@@ -47,11 +47,44 @@ async def chat_with_agent(
         if not file_path:
             raise HTTPException(status_code=404, detail="文件不存在")
         
+        # 读取表格数据获取列名
+        if file_path.endswith('.csv'):
+            df = pd.read_csv(file_path)
+        else:  # Excel
+            df = pd.read_excel(file_path)
+        
+        # 获取表格列名
+        columns = df.columns.tolist()
+        columns_info = "、".join([f"'{col}'" for col in columns])
+        
+        # 获取每列的数据类型信息
+        dtypes_info = []
+        for col in columns:
+            dtype = str(df[col].dtype)
+            # 添加示例值帮助理解列内容
+            sample_values = df[col].dropna().head(3).tolist()
+            sample_str = "、".join([f"'{str(val)}'" for val in sample_values]) if sample_values else "无样本"
+            dtypes_info.append(f"'{col}': 类型为{dtype}, 示例值: {sample_str}")
+        
+        columns_dtype_info = "\n".join(dtypes_info)
+        
         # 获取Agent
         agent = get_agent()
         
         # 增加系统消息上下文
         system_message = f"""你是一位专业的数据分析师,帮助用户处理表格数据。用户上传的文件为: {os.path.basename(file_path)}。
+
+该表格具有以下列({len(columns)}列):
+{columns_info}
+
+各列的数据类型和示例值:
+{columns_dtype_info}
+
+当用户模糊指代某一列时,请严格匹配最相关的列名:
+- 例如: 用户说"成绩"而实际列名是"中期成绩"或"期末成绩",应使用实际列名"中期成绩"或"期末成绩"
+- 例如: 用户说"学生姓名"而实际列名是"姓名",应使用实际列名"姓名"
+- 例如: 用户说"销售额"而实际列名是"销售收入",应使用实际列名"销售收入"
+
 请按照以下要求生成Python代码:
 1. 使用pandas库处理数据,已经预先导入为df变量
 2. 所有处理后的结果必须存储在名为'result'的DataFrame变量中
@@ -59,6 +92,8 @@ async def chat_with_agent(
 4. 生成的代码必须可以直接运行,不需要额外的导入语句
 5. 代码应简洁且易于理解,添加适当的注释
 6. 不要使用可能影响系统安全的操作(如os、subprocess等)
+7. 确保使用表格中实际存在的列名,而不是用户描述中可能不准确的名称
+8. 如果用户请求的列名不存在,主动给出建议使用哪个相似列名,并在代码中使用正确列名
 
 示例格式:
 ```python
@@ -103,12 +138,7 @@ result['新列'] = result['现有列'] * 2
         result = None
         image_url = None
         if python_code:
-            # 读取数据
-            if file_path.endswith('.csv'):
-                df = pd.read_csv(file_path)
-            else:  # Excel
-                df = pd.read_excel(file_path)
-            
+            # 使用已经读取的DataFrame
             # 执行代码并获取结果
             result_df, image_path = await process_dataframe_with_code(df, python_code, file_id)
             
