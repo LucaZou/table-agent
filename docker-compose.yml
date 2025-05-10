@@ -8,6 +8,10 @@ services:
     container_name: u_agent_frontend
     ports:
       - "80:80"
+      - "443:443"
+    volumes:
+      - ./uagent.top.pem:/etc/nginx/ssl/uagent.top.pem
+      - ./uagent.top.key:/etc/nginx/ssl/uagent.top.key
     depends_on:
       - backend
     networks:
