@@ -1,41 +1,68 @@
-# 设置PowerShell使用UTF-8编码
-$OutputEncoding = [System.Text.Encoding]::UTF8
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-[Console]::InputEncoding = [System.Text.Encoding]::UTF8
-$PSDefaultParameterValues['*:Encoding'] = 'utf8'
+#!/usr/bin/env pwsh
+# PowerShell部署脚本
 
-# 设置输出颜色（使用ESC的ASCII码）
-$ESC = [char]27
-$Green = "$ESC[32m"
-$Cyan = "$ESC[36m"
-$Yellow = "$ESC[33m"
-$NC = "$ESC[0m"
+# 参数定义
+param (
+    [string]$Env = "dev",
+    [switch]$Help
+)
 
-Write-Host "${Green}开始部署Docker环境...${NC}"
+# 显示帮助信息
+function Show-Help {
+    Write-Host "AI表格处理工具 - Docker部署脚本" -ForegroundColor Blue
+    Write-Host "用法: ./deploy-docker.ps1 [选项]"
+    Write-Host "选项:"
+    Write-Host "  -Env <env>   指定环境: dev (开发环境) 或 prod (生产环境), 默认是dev"
+    Write-Host "  -Help        显示帮助信息"
+    Write-Host ""
+}
 
-Write-Host "${Cyan}确保后端目录存在...${NC}"
-New-Item -ItemType Directory -Path "backend/uploads" -Force
-New-Item -ItemType Directory -Path "backend/static/images" -Force
+# 如果需要帮助，显示帮助信息并退出
+if ($Help) {
+    Show-Help
+    exit 0
+}
 
-# 停止和删除旧容器
-Write-Host "${Cyan}停止和删除旧容器...${NC}"
-docker-compose -f docker-compose.yml down
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "${Red}停止容器失败${NC}"
+# 验证环境参数
+if ($Env -ne "dev" -and $Env -ne "prod") {
+    Write-Host "错误: 环境必须是 'dev' 或 'prod'" -ForegroundColor Red
+    Show-Help
     exit 1
 }
 
-# 启动新容器并强制构建
-Write-Host "${Cyan}启动新容器...${NC}"
-docker-compose -f docker-compose.yml up -d --build
+Write-Host "开始部署Docker $Env 环境..." -ForegroundColor Green
+
+# 设置Docker Compose文件
+if ($Env -eq "dev") {
+    $ComposeFile = "docker-compose-dev.yml"
+    Write-Host "使用开发环境配置..." -ForegroundColor Green
+}
+else {
+    $ComposeFile = "docker-compose-prod.yml"
+    Write-Host "使用生产环境配置..." -ForegroundColor Green
+}
+
+# 确保目录存在
+if (-not (Test-Path -Path "backend/uploads")) {
+    New-Item -Path "backend/uploads" -ItemType Directory -Force | Out-Null
+}
+if (-not (Test-Path -Path "backend/static/images")) {
+    New-Item -Path "backend/static/images" -ItemType Directory -Force | Out-Null
+}
+
+Write-Host "停止和删除旧容器..." -ForegroundColor Cyan
+docker-compose -f $ComposeFile down
+
+Write-Host "启动新容器..." -ForegroundColor Cyan
+docker-compose -f $ComposeFile up -d --build
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "${Red}容器启动失败${NC}"
+    Write-Host "容器启动失败" -ForegroundColor Red
     exit 1
 }
 
-Write-Host "${Green}容器状态:${NC}"
-docker-compose -f docker-compose.yml ps
+Write-Host "容器状态:" -ForegroundColor Green
+docker-compose -f $ComposeFile ps
 
-Write-Host "${Green}部署完成!${NC}"
-Write-Host "${Yellow}前端访问地址: http://localhost${NC}"
-Write-Host "${Yellow}后端API地址: http://localhost:8000${NC}"   
+Write-Host "部署完成!" -ForegroundColor Green
+Write-Host "前端访问地址: http://localhost" -ForegroundColor Yellow
+Write-Host "后端API地址: http://localhost:8000" -ForegroundColor Yellow   

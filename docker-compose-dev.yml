@@ -2,16 +2,21 @@ services:
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
-      tags:
-        - "0.0.1"
-    container_name: u_agent_frontend
+      dockerfile: Dockerfile.dev
+    container_name: u_agent_frontend_dev
     ports:
-      - "80:80"
+      - "80:8080"
       - "443:443"
     volumes:
+      - ./frontend:/app
+      - /app/node_modules
       - ./uagent.top.pem:/etc/nginx/ssl/uagent.top.pem
       - ./uagent.top.key:/etc/nginx/ssl/uagent.top.key
+    environment:
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true
+      - PORT=8080
+      - VUE_APP_API_URL=http://backend:8000
     depends_on:
       - backend
     networks:
@@ -20,19 +25,24 @@ services:
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile
-      tags:
-        - "0.0.1"
-    container_name: u_agent_backend
+      dockerfile: Dockerfile.dev
+    container_name: u_agent_backend_dev
     ports:
       - "8000:8000"
     volumes:
-      - ./backend/app:/app/app
-      - backend-uploads:/app/uploads
-      - backend-static:/app/static/images
+      - ./backend:/app
+      - /app/.venv
     environment:
       - TZ=Asia/Shanghai
       - PYTHONUNBUFFERED=1
+      - DEBUG=true
+      - HOST=0.0.0.0
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
     networks:
       - app-network
     restart: unless-stopped

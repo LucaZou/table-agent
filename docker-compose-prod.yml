@@ -11,27 +11,65 @@ services:
       - ./uagent.top.pem:/etc/nginx/ssl/uagent.top.pem
       - ./uagent.top.key:/etc/nginx/ssl/uagent.top.key
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
     networks:
       - app-network
     restart: unless-stopped
 
   backend:
-    image: python:3.9-slim
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
     container_name: u_agent_backend
-    working_dir: /app
-    command: sh -c "pip install -r requirements.txt && gunicorn app.main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000"
     ports:
       - "8000:8000"
     volumes:
-      - ./backend:/app
+      - backend-uploads:/app/uploads
+      - backend-static:/app/static/images
     environment:
       - TZ=Asia/Shanghai
       - PYTHONUNBUFFERED=1
+      - DEBUG=false
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.75'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
     networks:
       - app-network
     restart: unless-stopped
 
+volumes:
+  backend-uploads:
+    driver: local
+  backend-static:
+    driver: local
+
 networks:
   app-network:
-    driver: bridge 
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.0.0/16 

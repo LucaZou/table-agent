@@ -145,15 +145,16 @@ ensure_swagger_files_exist()
 class CustomJSONResponse(JSONResponse):
     def render(self, content: Any) -> bytes:
         def json_safe_default(obj):
-            if pd.isna(obj) or (isinstance(obj, float) and (np.isnan(obj) or np.isinf(obj))):
+            if pd.isna(obj) or obj is pd.NA or obj is None or (isinstance(obj, float) and (np.isnan(obj) or np.isinf(obj))):
                 return None
             if isinstance(obj, (pd.Series, pd.DataFrame)):
-                return obj.to_dict()
+                return obj.replace({pd.NA: None}).where(pd.notnull, None).to_dict()
             return str(obj)
             
         return json.dumps(
             content,
             ensure_ascii=False,
+            allow_nan=False,
             default=json_safe_default
         ).encode("utf-8")
 
@@ -200,6 +201,20 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 # 包含路由
 app.include_router(file_router.router)
 app.include_router(chat_router.router)
+
+# 配置最大请求体大小
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.responses import Response
+
+class LargeRequestMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        # 将请求体大小限制设置为100MB
+        request.scope["max_body_size"] = 100 * 1024 * 1024  # 100MB
+        response = await call_next(request)
+        return response
+
+app.add_middleware(LargeRequestMiddleware)
 
 @app.on_event("startup")
 async def startup_event():

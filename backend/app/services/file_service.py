@@ -42,25 +42,33 @@ async def read_file_preview(file_id: str, rows: int = 20) -> Dict[str, Any]:
     
     # 根据文件类型读取数据
     file_type = Path(file_path).suffix.lower()
-    if file_type == '.csv':
-        df = pd.read_csv(file_path)
-    else:  # .xlsx 或 .xls
-        df = pd.read_excel(file_path)
-
-    # 统一处理特殊值并记录
-    if df.isin([float('inf'), float('-inf'), pd.NA]).any().any():
-        logger.warning(f"文件 {file_id} 包含特殊值，已替换为 None")
-    df = df.replace([float('inf'), float('-inf'), pd.NA], None)
+    try:
+        if file_type == '.csv':
+            df = pd.read_csv(file_path, keep_default_na=True)
+        else:  # .xlsx 或 .xls
+            df = pd.read_excel(file_path, keep_default_na=True)
     
-    # 构建预览数据
-    preview_data = {
-        "columns": df.columns.tolist(),
-        "data": df.head(rows).to_dict(orient="records"),
-        "rows_count": len(df),
-        "file_type": file_type[1:]  # 去掉点号
-    }
-    
-    return preview_data
+        # 统一处理所有类型的空值、无穷值和NaN值
+        df = df.replace([float('inf'), float('-inf')], None)
+        
+        # 将所有NaN、None和pd.NA替换为None
+        df = df.astype(object).replace([pd.NA, pd.NaT], None)
+        df = df.where(pd.notnull(df), None)
+        
+        logger.info(f"文件 {file_id} 数据处理完成，行数: {len(df)}, 列数: {len(df.columns)}")
+        
+        # 构建预览数据
+        preview_data = {
+            "columns": df.columns.tolist(),
+            "data": df.head(rows).to_dict(orient="records"),
+            "rows_count": len(df),
+            "file_type": file_type[1:]  # 去掉点号
+        }
+        
+        return preview_data
+    except Exception as e:
+        logger.error(f"处理文件 {file_id} 时发生错误: {str(e)}")
+        raise Exception(f"读取文件失败: {str(e)}")
 
 async def get_file_path_by_id(file_id: str) -> Optional[str]:
     """通过文件ID查找文件路径"""

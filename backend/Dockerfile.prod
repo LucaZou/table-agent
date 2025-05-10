@@ -1,0 +1,87 @@
+FROM python:3.9-slim AS builder
+
+WORKDIR /app
+
+# 设置Python不缓存pyc文件
+ENV PYTHONDONTWRITEBYTECODE=1
+# 设置Python不缓冲输出
+ENV PYTHONUNBUFFERED=1
+# 设置时区
+ENV TZ=Asia/Shanghai
+
+# 配置镜像源并安装编译依赖
+RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list.d/debian.sources \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+        gcc \
+        build-essential \
+        python3-dev \
+        libpq-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# 配置pip源
+RUN pip config set global.index-url https://mirrors.aliyun.com/pypi/simple/
+
+# 安装依赖到虚拟环境
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# 复制项目依赖文件
+COPY requirements.txt .
+
+# 先安装numpy/pandas等大型包，加快后续安装
+RUN pip install --no-cache-dir numpy pandas matplotlib \
+    && pip install --no-cache-dir -r requirements.txt \
+    && rm -rf ~/.cache/pip
+
+# 复制项目文件
+COPY . .
+
+# 优化项目文件，删除不必要的文件减少镜像大小
+RUN find . -name "*.pyc" -delete \
+    && find . -name "__pycache__" -delete \
+    && rm -rf tests .pytest_cache .git .github .vscode
+
+# 第二阶段：构建最终镜像
+FROM python:3.9-slim AS final
+
+WORKDIR /app
+
+# 设置环境变量
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV TZ=Asia/Shanghai
+
+# 安装运行时依赖
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        libpq5 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# 创建非root用户运行应用
+RUN groupadd -r uagent && useradd --no-log-init -r -g uagent uagent
+
+# 从构建阶段复制虚拟环境
+COPY --from=builder /opt/venv /opt/venv
+# 复制应用代码
+COPY --from=builder /app /app
+
+# 创建必要的目录并设置权限
+RUN mkdir -p uploads static/images \
+    && chown -R uagent:uagent /app \
+    && chmod -R 755 uploads \
+    && chmod -R 755 static/images
+
+# 设置环境变量
+ENV PATH="/opt/venv/bin:$PATH"
+
+# 切换到非root用户
+USER uagent
+
+# 端口暴露
+EXPOSE 8000
+
+# 生产环境使用gunicorn，优化并发和性能
+CMD ["gunicorn", "app.main:app", "--workers", "4", "--worker-class", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000", "--timeout", "300", "--keep-alive", "300"] 
