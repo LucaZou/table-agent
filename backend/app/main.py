@@ -274,6 +274,11 @@ async def custom_swagger_ui_html():
         </html>
         """)
 
+# 添加健康检查端点
+@app.get("/health", status_code=200)
+async def health_check():
+    return {"status": "healthy"}
+
 if __name__ == "__main__":
     import uvicorn
     logger.info(f"应用启动 - 静态文件目录: {STATIC_DIR}")

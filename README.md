@@ -101,3 +101,87 @@ API文档可通过以下URL访问：
 ## 📄 License
 
 本项目采用 [MIT License](LICENSE).
+
+## 系统要求
+
+- Docker 20.10.0+
+- Docker Compose 2.0.0+
+- 至少2GB可用内存
+- 至少10GB磁盘空间
+
+## 快速开始
+
+### 开发环境部署
+
+在Windows系统下:
+
+```powershell
+./deploy-docker.ps1 -Env dev
+```
+
+在Linux/macOS系统下:
+
+```bash
+chmod +x deploy-docker.sh
+./deploy-docker.sh -e dev
+```
+
+### 生产环境部署
+
+确保配置好您的SSL证书，将证书文件放在项目根目录:
+- `uagent.top.pem` (SSL证书)
+- `uagent.top.key` (SSL私钥)
+
+在Windows系统下:
+
+```powershell
+./deploy-docker.ps1 -Env prod
+```
+
+在Linux/macOS系统下:
+
+```bash
+chmod +x deploy-docker.sh
+./deploy-docker.sh -e prod
+```
+
+## 访问系统
+
+- 前端界面 (开发环境): http://localhost
+- 前端界面 (生产环境): https://localhost
+- 后端API: http://localhost:8000
+
+## 容器清理
+
+如需清理未使用的Docker资源，可以添加`-Prune`或`-p`参数：
+
+Windows:
+```powershell
+./deploy-docker.ps1 -Env prod -Prune
+```
+
+Linux/macOS:
+```bash
+./deploy-docker.sh -e prod -p
+```
+
+## 网络配置
+
+系统使用自定义Docker网络，IP分配如下:
+- 网关: 172.28.0.1
+- 后端服务: 172.28.0.2
+- 前端服务: 172.28.0.3
+
+## 故障排除
+
+如果容器启动失败，请检查以下项目:
+
+1. 确认Docker和Docker Compose已正确安装
+2. 生产环境下确认SSL证书文件存在且有效
+3. 确认端口80、443和8000未被其他应用占用
+4. 查看Docker日志以获取详细错误信息:
+
+```bash
+docker logs u_agent_frontend
+docker logs u_agent_backend
+```

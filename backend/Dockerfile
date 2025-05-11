@@ -17,29 +17,31 @@ RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list.d/debia
         build-essential \
         python3-dev \
         libpq-dev \
+        curl \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# 复制项目依赖文件
-COPY requirements.txt .
-
-# 先安装numpy/pandas等大型包，加快后续安装
-# 使用阿里云的pip镜像源安装依赖
-RUN pip config set global.index-url https://mirrors.aliyun.com/pypi/simple/ \
-    && pip install --no-cache-dir numpy pandas matplotlib \
-    && pip install --no-cache-dir -r requirements.txt \
-    && rm -rf ~/.cache/pip
+# 配置pip源
+RUN pip config set global.index-url https://mirrors.aliyun.com/pypi/simple/
 
 # 复制项目文件
 COPY . .
 
-# 创建必要的目录并设置权限
+# 安装生产依赖
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# 创建必要的目录
 RUN mkdir -p uploads static/images \
     && chmod -R 755 uploads \
     && chmod -R 755 static/images
 
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+  CMD curl --fail http://localhost:8000/health || exit 1
+
 # 端口暴露
 EXPOSE 8000
 
-# 启动命令
-CMD ["gunicorn", "app.main:app", "--workers", "4", "--worker-class", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000", "--timeout", "300", "--keep-alive", "300"]
+# 生产模式使用Gunicorn启动
+CMD ["gunicorn", "app.main:app", "--workers", "4", "--worker-class", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000"]
