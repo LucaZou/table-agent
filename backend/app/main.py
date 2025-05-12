@@ -145,14 +145,30 @@ ensure_swagger_files_exist()
 class CustomJSONResponse(JSONResponse):
     def render(self, content: Any) -> bytes:
         def json_safe_default(obj):
-            if pd.isna(obj) or obj is pd.NA or obj is None or (isinstance(obj, float) and (np.isnan(obj) or np.isinf(obj))):
+            if pd.isna(obj) or obj is pd.NA or obj is None:
+                return None
+            if isinstance(obj, float) and (np.isnan(obj) or np.isinf(obj)):
                 return None
             if isinstance(obj, (pd.Series, pd.DataFrame)):
-                return obj.replace({pd.NA: None}).where(pd.notnull, None).to_dict()
+                # 确保DataFrame中不含有非法的JSON值
+                return obj.replace({np.inf: None, -np.inf: None, np.nan: None, pd.NA: None}).where(pd.notnull, None).to_dict()
             return str(obj)
             
+        # 递归处理内容中的所有浮点值
+        def sanitize_content(data):
+            if isinstance(data, dict):
+                return {k: sanitize_content(v) for k, v in data.items()}
+            elif isinstance(data, list):
+                return [sanitize_content(item) for item in data]
+            elif isinstance(data, float) and (np.isnan(data) or np.isinf(data)):
+                return None
+            return data
+            
+        # 处理内容中可能存在的非法JSON值
+        sanitized_content = sanitize_content(content)
+            
         return json.dumps(
-            content,
+            sanitized_content,
             ensure_ascii=False,
             allow_nan=False,
             default=json_safe_default

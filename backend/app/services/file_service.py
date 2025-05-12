@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+import numpy as np
 import logging
 from fastapi import UploadFile
 from pathlib import Path
@@ -49,10 +50,10 @@ async def read_file_preview(file_id: str, rows: int = 20) -> Dict[str, Any]:
             df = pd.read_excel(file_path, keep_default_na=True)
     
         # 统一处理所有类型的空值、无穷值和NaN值
-        df = df.replace([float('inf'), float('-inf')], None)
+        df = df.replace([float('inf'), float('-inf'), np.inf, -np.inf], None)
         
         # 将所有NaN、None和pd.NA替换为None
-        df = df.astype(object).replace([pd.NA, pd.NaT], None)
+        df = df.astype(object).replace([pd.NA, pd.NaT, np.nan], None)
         df = df.where(pd.notnull(df), None)
         
         logger.info(f"文件 {file_id} 数据处理完成，行数: {len(df)}, 列数: {len(df.columns)}")

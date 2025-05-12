@@ -6,6 +6,7 @@ import uuid
 import pandas as pd
 import matplotlib.pyplot as plt
 import asyncio
+import numpy as np
 from typing import Dict, List, Any, Optional, Tuple
 from io import StringIO
 from dotenv import load_dotenv
@@ -126,7 +127,9 @@ async def process_dataframe_with_code(df: pd.DataFrame, code: str, file_id: str)
         # 如果有结果DataFrame，保存处理后的文件
         if result_df is not None:
             # 处理特殊浮点值，避免JSON序列化问题
-            result_df = result_df.replace([float('inf'), float('-inf')], [None, None])
+            result_df = result_df.replace([float('inf'), float('-inf'), np.inf, -np.inf], None)
+            result_df = result_df.where(pd.notnull(result_df), None)
+            
             # 确定文件类型并保存
             original_file_path = await get_file_path_by_id(file_id)
             if original_file_path:
