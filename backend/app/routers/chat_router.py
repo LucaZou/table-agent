@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import matplotlib.pyplot as plt
 import pandas as pd
+import numpy as np
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 
 from app.models.chat_models import ChatMessage, ChatRequest, ChatResponse, ProcessResult
@@ -115,7 +116,8 @@ result['新列'] = result['现有列'] * 2
             # 如果有结果DataFrame,转换为字符串表示预览
             if result_df is not None:
                 # 处理特殊浮点值
-                result_df = result_df.replace([float('inf'), float('-inf')], [None, None])
+                result_df = result_df.replace([float('inf'), float('-inf'), np.inf, -np.inf], None)
+                result_df = result_df.where(pd.notnull(result_df), None)
                 
                 result = {
                     "success": True,
