@@ -48,11 +48,39 @@ async def chat_with_agent(
         if not file_path:
             raise HTTPException(status_code=404, detail="文件不存在")
         
+        # 读取数据并分析基本信息
+        try:
+            if file_path.endswith('.csv'):
+                df = pd.read_csv(file_path)
+            else:  # Excel
+                df = pd.read_excel(file_path)
+                
+            # 分析表格基本信息
+            df_info = {
+                "columns": df.columns.tolist(),
+                "dtypes": {col: str(df[col].dtype) for col in df.columns},
+                "shape": df.shape,
+                "missing_values": df.isna().sum().to_dict(),
+                "sample_data": df.head(5).to_dict(orient="records")
+            }
+        except Exception as e:
+            logger.exception(f"读取或分析文件时出错: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"读取或分析文件数据失败: {str(e)}")
+        
         # 获取Agent
         agent = get_agent()
         
         # 增加系统消息上下文
         system_message = f"""你是一位专业的数据分析师,帮助用户处理表格数据。用户上传的文件为: {os.path.basename(file_path)}。
+
+表格基本信息:
+- 列名: {df_info['columns']}
+- 数据类型: {df_info['dtypes']}
+- 表格大小: {df_info['shape'][0]}行 × {df_info['shape'][1]}列
+- 缺失值统计: {df_info['missing_values']}
+- 数据样例:
+{pd.DataFrame(df_info['sample_data']).to_string(index=False)}
+
 请按照以下要求生成Python代码:
 1. 使用pandas库处理数据,已经预先导入为df变量
 2. 所有处理后的结果必须存储在名为'result'的DataFrame变量中
@@ -104,12 +132,6 @@ result['新列'] = result['现有列'] * 2
         result = None
         image_url = None
         if python_code:
-            # 读取数据
-            if file_path.endswith('.csv'):
-                df = pd.read_csv(file_path)
-            else:  # Excel
-                df = pd.read_excel(file_path)
-            
             # 执行代码并获取结果
             result_df, image_path = await process_dataframe_with_code(df, python_code, file_id)
             
